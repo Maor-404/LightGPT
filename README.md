@@ -70,3 +70,38 @@ python3 examples/model_check.py --out report.txt --onnx lightgpt.onnx --npz ligh
 ```
 
 The `model_check.py` script will write a textual report `report.txt` containing the generated token ids and a simple tokenized token-preview. Use this to verify that LightGPT produces outputs for different content styles and runtimes.
+
+Packaging & publishing to PyPI
+-----------------------------
+
+This repository is configured to publish as a Python package. Steps to publish a release:
+
+1. Create a PyPI API token: go to <https://pypi.org/manage/account/#api-tokens> and create a token with `upload` scope.
+
+Continuous Integration (recommended)
+----------------------------------
+
+Add the token as a repository secret named `PYPI_API_TOKEN` in GitHub (Settings → Secrets). A release workflow is included that publishes automatically when you push a tag matching `v*` (e.g. `v0.1.0`).
+
+Manual (local)
+--------------
+
+If you prefer to publish locally, set an environment variable and run the included publish script. Use a secure shell environment — do not commit your token.
+
+POSIX example:
+
+```
+export TWINE_PASSWORD=pypi-...
+./scripts/publish_pypi.sh
+```
+
+PowerShell example:
+
+```
+$env:TWINE_PASSWORD='pypi-...'; ./scripts/publish_pypi.ps1
+```
+
+Notes:
+
+- The package uses `pyproject.toml` + `setuptools` and includes `README.md` as the long description.
+- For Colab, you can install directly from GitHub: `pip install git+https://github.com/Maor-404/LightGPT.git`.
