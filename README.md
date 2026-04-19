@@ -2,6 +2,11 @@
 
 LightGPT — a lightweight, GPT-styled LLM designed to run on a wide range of hardware. It supports three modes:
 
+[![PyPI version](https://img.shields.io/pypi/v/lightgpt.svg)](https://pypi.org/project/lightgpt/)
+[![CI](https://github.com/Maor-404/LightGPT/actions/workflows/ci.yml/badge.svg)](https://github.com/Maor-404/LightGPT/actions/workflows/ci.yml)
+[![Publish](https://github.com/Maor-404/LightGPT/actions/workflows/publish.yml/badge.svg)](https://github.com/Maor-404/LightGPT/actions/workflows/publish.yml)
+[![Open in Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/Maor-404/LightGPT/blob/main/colab/LightGPT_Colab.ipynb)
+
 - Overkill: uses larger architecture and optimized libraries (for modern hardware)
 - Normal: balanced parameters for decent CPU/RAM machines
 - Underkill: very small footprint for ancient/low-memory hardware

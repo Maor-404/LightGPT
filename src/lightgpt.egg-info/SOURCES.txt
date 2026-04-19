@@ -1,0 +1,15 @@
+LICENSE
+MANIFEST.in
+README.md
+pyproject.toml
+setup.cfg
+src/lightgpt/__init__.py
+src/lightgpt/infer.py
+src/lightgpt/model.py
+src/lightgpt/tiny_runtime.py
+src/lightgpt/train.py
+src/lightgpt.egg-info/PKG-INFO
+src/lightgpt.egg-info/SOURCES.txt
+src/lightgpt.egg-info/dependency_links.txt
+src/lightgpt.egg-info/requires.txt
+src/lightgpt.egg-info/top_level.txt
