@@ -1,4 +1,5 @@
 #!/bin/bash
+exec ./scripts/push_changes.sh "$@"
 # Push latest changes to GitHub
 
 cd /workspaces/LightGPT

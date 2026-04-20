@@ -5,18 +5,21 @@ Interactive GUI for configuring and running LightGPT models in Jupyter and Colab
 ## Features
 
 ✨ **Interactive Controls**
+
 - Model mode selector (Overkill, Normal, Underkill)
 - April Fools stupidity toggle
 - Real-time parameter adjustment
 - Dynamic code generation
 
 🎨 **Visual Interface**
+
 - Color-coded sections
 - Emoji indicators
 - Live configuration display
 - Copy-paste ready Python code
 
 🚀 **Easy to Use**
+
 - Single cell to run in Colab
 - No complex setup
 - Visual feedback for all settings
@@ -62,15 +65,18 @@ Choose one of three modes:
 ### 2. Configure Parameters
 
 **Max Tokens**: How many tokens to generate (1-128)
+
 - Lower = faster, shorter output
 - Higher = more text, longer generation time
 
 **Temperature**: Randomness of predictions
+
 - 0.1 = very deterministic, same output each time
 - 1.0 = balanced randomness
 - 2.0 = highly random, creative but chaotic
 
 **Decoding Strategy**:
+
 - 🎯 Greedy: Always pick the best predicted token
 - 🎲 Sampling: Sample randomly based on probabilities (more creative)
 
@@ -83,6 +89,7 @@ Toggle **🤪 Stupid Mode** to activate the chaotic easter egg:
 ```
 
 When enabled:
+
 - Model reasoning becomes backwards
 - 15% random token injection
 - Silly text corruption
@@ -154,15 +161,19 @@ Copy this code, paste it in a new cell, and run!
 ## Use Cases
 
 ### 💡 Teaching
+
 Show students how to configure models without command-line gymnastics
 
 ### 🧪 Experimentation
+
 Quickly try different settings without rewriting code
 
 ### 🎉 Fun
+
 Toggle April Fools mode for hilarious experiments
 
 ### 📚 Learning
+
 See exactly what parameters do and how code changes
 
 ## Requirements
@@ -187,15 +198,19 @@ In Colab, ipywidgets is usually pre-installed. If not:
 ## Tips & Tricks
 
 ### 🔄 Real-time Updates
+
 All settings update the output code in real-time. Adjust a slider and watch the code change instantly!
 
 ### 📋 Copy Button
+
 Most Jupyter environments let you copy code blocks with a click. Use this to quickly grab your generated code.
 
 ### 🎯 Presets
+
 Use these recommended configurations:
 
 **Fast Inference:**
+
 ```
 Mode: Underkill
 Max Tokens: 16
@@ -204,6 +219,7 @@ Decoding: Greedy
 ```
 
 **Balanced:**
+
 ```
 Mode: Normal
 Max Tokens: 32
@@ -212,6 +228,7 @@ Decoding: Sampling
 ```
 
 **Creative Output:**
+
 ```
 Mode: Overkill (on GPU)
 Max Tokens: 64
@@ -220,6 +237,7 @@ Decoding: Sampling
 ```
 
 **Maximum Chaos:**
+
 ```
 Mode: Any
 April Fools: ENABLED
@@ -229,15 +247,18 @@ Temperature: 2.0
 ## Troubleshooting
 
 ### ipywidgets not showing
+
 ```python
 # Enable widgets in Jupyter
 !jupyter nbextension enable --py --sys-prefix widgetsnbextension
 ```
 
 ### Changes not updating
+
 Make sure you're interacting with the toggle buttons and sliders. They should update the config display instantly.
 
 ### Code not copying
+
 You can always manually type or select and copy from the code block.
 
 ## Have Fun! 🎉

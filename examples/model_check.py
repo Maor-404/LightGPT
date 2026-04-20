@@ -47,7 +47,7 @@ CHECK_PROMPTS = {
 def run_pytorch_check(mode, prompt, max_new_tokens=32):
     model = LightGPT(mode=mode, max_seq_len=128)
     model.eval()
-    ids = LightGPT.small_vocab_tokenize(prompt)
+    ids = model.small_vocab_tokenize(prompt)
     out_ids = generate(model, ids, max_new_tokens=max_new_tokens, temperature=1.0, device='cpu', sample=False)
     return out_ids
 

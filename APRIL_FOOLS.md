@@ -1,29 +1,68 @@
-# 🎪 LightGPT April Fools Easter Egg 🎪
+# 🎪 LightGPT Special Events Easter Egg 🎪
 
-## The Joke: "Stupidity is Reasoning"
+## The Joke: "Stupidity is Reasoning" (April Fools ONLY!)
 
-On April 1st (or when explicitly enabled), LightGPT's intelligence is *inverted*. The model becomes hilariously incompetent, with:
+**IMPORTANT**: Only April 1st (April Fools Day) activates true stupidity with random token injection. Other special dates provide themed features and reasoning but do NOT inject stupidity into token generation.
 
+### 🎭 **April 1st - April Fools Day (STUPIDITY MODE)**
+
+- **True stupidity**: Random token injection (15% chance)
 - **Backwards thinking**: Logic runs in reverse
 - **Silly token replacements**: "logic" → "vibes", "error" → "feature"
-- **Random token injection**: 15% chance of completely random predictions
 - **Absurd reasoning**: Thinking involves bananas, potatoes, and Thursdays
 - **Confidently wrong**: Maximum confidence in being completely incorrect
 
+### ⭐ **May 4th - Star Wars Day** ("May the 4th be with you!") - *Special Features Only*
+
+- **Force-guided reasoning**: Decisions made by consulting the Force
+- **Jedi token replacements**: "logic" → "the Force", "error" → "dark side"
+- **Lightsaber analysis**: Everything involves lightsabers and the Empire
+- **Sith-level sass**: Maximum rudeness with Star Wars flair
+- **No stupidity injection**: Normal token generation with themed overlays
+
+### 💀 **September 15th - Undertale Anniversary** - *Special Features Only*
+
+- **Mercy-based reasoning**: Everything is about mercy and neutral endings
+- **Undertale token replacements**: "logic" → "DETERMINATION", "error" → "genocide"
+- **Save file analysis**: References to save files and Flowey
+- **Sans-level chill**: Laid-back responses with skeleton humor
+- **No stupidity injection**: Normal token generation with themed overlays
+
+### 🎃 **October 31st - Halloween** - *Special Features Only*
+
+- **Spooky reasoning**: Ghosts and pumpkins guide all decisions
+- **Halloween token replacements**: "logic" → "witchcraft", "error" → "haunted"
+- **Full moon effects**: Random spooky transformations
+- **Boo-level scariness**: Maximum jump-scare potential
+- **No stupidity injection**: Normal token generation with themed overlays
+
+### 🌑 **February 28th - Deltarune Anniversary** - *Special Features Only*
+
+- **Dark World reasoning**: Shadows and mystery guide decisions
+- **Deltarune token replacements**: "logic" → "dark wisdom", "error" → "dark omen"
+- **Royal decree analysis**: References to the Knight and throne rooms
+- **Ancient Intelligence**: Ominous, mysterious tone
+- **No stupidity injection**: Normal token generation with themed overlays
+
 ## Activation
 
-The April Fools easter egg activates **automatically** on April 1st. You can also force it anytime:
+**Stupidity Mode** (random token injection) activates **only** on April 1st or when explicitly forced. Other special dates provide themed features but maintain normal token generation.
 
 ```python
 from lightgpt import april_fools
-april_fools.FORCE_APRIL_FOOLS = True  # Enable even when not April 1st
+
+# Force stupidity (April Fools only)
+april_fools.FORCE_APRIL_FOOLS = True  # Enables stupidity mode
+
+# Other dates auto-activate themed features (no stupidity)
+# Themes activate automatically on their special dates
 ```
 
 ## How It Works
 
-### 1. **Stupidity Mode in Generation**
+### 1. **Themed Generation**
 
-When generating text, you can inject stupidity:
+When generating text, you control stupidity injection and themed features:
 
 ```python
 from lightgpt import LightGPT, generate
@@ -31,48 +70,76 @@ from lightgpt import LightGPT, generate
 model = LightGPT()
 prompt_ids = model.small_vocab_tokenize("Hello")
 
-# Auto-detects: uses stupidity on April 1st
+# Auto-detect: stupidity ONLY on April 1st, themed features on other special dates
 output = generate(model, prompt_ids, max_new_tokens=32)
 
-# Force stupidity
-output = generate(model, prompt_ids, max_new_tokens=32, apply_stupidity=True)
+# Force stupidity (April Fools only - includes random token injection)
+output = generate(model, prompt_ids, max_new_tokens=32, apply_stupidity="april_fools")
 
-# Disable stupidity
+# Force themed features (no stupidity injection)
+output = generate(model, prompt_ids, max_new_tokens=32, apply_stupidity="star_wars")
+output = generate(model, prompt_ids, max_new_tokens=32, apply_stupidity="halloween")
+output = generate(model, prompt_ids, max_new_tokens=32, apply_stupidity="deltarune")
+
+# Disable all special features
 output = generate(model, prompt_ids, max_new_tokens=32, apply_stupidity=False)
 ```
 
-### 2. **Silly Text Corruption**
+### 2. **Themed Text Corruption**
 
-Transform any text through the stupidity pipeline:
+Transform any text through different themed stupidity pipelines:
 
 ```python
-from lightgpt.april_fools import AprilFoolsReasoner
+from lightgpt.april_fools import AprilFoolsReasoner, StarWarsReasoner, HalloweenReasoner
 
 text = "The model learns from data"
 
-# Apply token replacements
-corrupted = AprilFoolsReasoner.apply_silly_token_replacements(text)
+# April Fools corruption
+april_fools = AprilFoolsReasoner()
+corrupted = april_fools.apply_silly_token_replacements(text)
 # → "The definitely-not-suspicious model learns from data"
 
-# Add silly suffix
-with_suffix = AprilFoolsReasoner.add_silly_suffix(text)
+# Star Wars corruption
+star_wars = StarWarsReasoner()
+corrupted = star_wars.apply_silly_token_replacements(text)
+# → "The Force-guided model learns from data"
+
+# Halloween corruption
+halloween = HalloweenReasoner()
+corrupted = halloween.apply_silly_token_replacements(text)
+# → "The haunted model learns from data"
+
+# Add themed suffixes
+with_suffix = april_fools.add_silly_suffix(text)
 # → "The model learns from data ...or does it? (it doesn't)"
 
 # Full stupidity injection (intensity 0.0-1.0)
-stupid = AprilFoolsReasoner.inject_stupidity(text, intensity=0.8)
+stupid = april_fools.inject_stupidity(text, intensity=0.8)
 # → Various levels of absurdity
 ```
 
-### 3. **Silly Reasoning Phrases**
+### 3. **Themed Reasoning Phrases**
 
-Get absurd thinking phrases:
+Get absurd thinking phrases for each theme:
 
 ```python
-from lightgpt.april_fools import AprilFoolsReasoner
+from lightgpt.april_fools import AprilFoolsReasoner, StarWarsReasoner, UndertaleReasoner
 
-reasoning = AprilFoolsReasoner.get_silly_reasoning()
+# April Fools reasoning
+april_fools = AprilFoolsReasoner()
+reasoning = april_fools.get_silly_reasoning()
 # "Wait... if light has GPT, then GPT must be heavy? 
 #  Therefore LightGPT is a paradox!"
+
+# Star Wars reasoning
+star_wars = StarWarsReasoner()
+reasoning = star_wars.get_silly_reasoning()
+# "The Force flows through this problem... suggesting the answer is the dark side."
+
+# Undertale reasoning
+undertale = UndertaleReasoner()
+reasoning = undertale.get_silly_reasoning()
+# "Human, this problem... it was nice to meet you."
 ```
 
 ### 4. **Metrics & Status Reports**
@@ -132,11 +199,25 @@ Full interactive experience with:
 
 **`src/lightgpt/april_fools.py`**
 
-- `is_april_fools_day()`: Check if today is April 1st
-- `AprilFoolsReasoner`: Main stupidity class with token replacements, backwards reasoning, etc.
-- `StupidityKernel`: The reasoning engine that applies chaos
-- `should_activate_stupidity()`: Auto-detect based on calendar or force flag
-- `FORCE_APRIL_FOOLS`: Global flag to enable stupidity anytime
+- **Date Detection Functions**:
+  - `is_april_fools_day()`: Check if today is April 1st
+  - `is_star_wars_day()`: Check if today is May 4th
+  - `is_undertale_anniversary()`: Check if today is September 15th
+  - `is_halloween()`: Check if today is October 31st
+  - `is_rude_buster_day()`: Check if today is February 28th
+  - `get_current_special_event()`: Returns current active event type
+
+- **Themed Reasoner Classes**:
+  - `AprilFoolsReasoner`: Classic backwards thinking and absurdity (with stupidity injection)
+  - `StarWarsReasoner`: Force-guided reasoning with Jedi/Sith themes
+  - `UndertaleReasoner`: Mercy-based reasoning with game references
+  - `HalloweenReasoner`: Spooky reasoning with supernatural themes
+  - `DeltaruneReasoner`: Dark World reasoning with mystery and royalty themes
+  - `StupidityKernel`: Generic reasoning engine (stupidity injection only for April Fools)
+
+- **Activation Functions**:
+  - `should_activate_stupidity()`: Auto-detect based on calendar or force flag
+  - `FORCE_APRIL_FOOLS`: Global flag to enable stupidity anytime
 
 **`src/lightgpt/silly_metrics.py`**
 

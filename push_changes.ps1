@@ -1,5 +1,8 @@
 # Push latest changes to GitHub (PowerShell)
 
+& .\scripts\push_changes.ps1 @Args
+exit 0
+
 $repoPath = "C:\path\to\LightGPT"  # Update this to your repo path
 
 Push-Location $repoPath
