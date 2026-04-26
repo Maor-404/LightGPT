@@ -1,81 +1,122 @@
+# LightGPT Training Script (Finetuning)
+# ------------------------------------------------------------
+# This script demonstrates a very simple finetuning loop using the Hugging
+# Face ``transformers`` library. It is intentionally lightweight: it loads a
+# pretrained causal model, adds a language‑modeling head (already present in the
+# model), and runs a few training epochs on a small text dataset.
+# ------------------------------------------------------------
+
 import argparse
-import math
-import time
+import os
 import torch
-from torch.utils.data import DataLoader
-from datasets import load_dataset
-from tqdm import tqdm
+from torch.utils.data import Dataset, DataLoader
+from transformers import AutoTokenizer, AutoModelForCausalLM, AdamW
 
-from .model import LightGPT
+class TextDataset(Dataset):
+    """A tiny dataset used for demonstration purposes.
+
+    It reads a plain‑text file where each line is considered an independent
+    training example.
+    """
+
+    def __init__(self, file_path: str, tokenizer, max_length: int = 128):
+        self.samples = []
+        self.tokenizer = tokenizer
+        self.max_length = max_length
+        with open(file_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                self.samples.append(line)
+
+    def __len__(self):
+        return len(self.samples)
+
+    def __getitem__(self, idx):
+        text = self.samples[idx]
+        encoding = self.tokenizer(
+            text,
+            truncation=True,
+            padding="max_length",
+            max_length=self.max_length,
+            return_tensors="pt",
+        )
+        # ``input_ids`` and ``attention_mask`` are tensors of shape (1, seq_len)
+        return {
+            "input_ids": encoding["input_ids"].squeeze(0),
+            "attention_mask": encoding["attention_mask"].squeeze(0),
+        }
 
 
-def collate_fn(batch, tokenizer_fn, max_length=64):
-    ids = []
-    for ex in batch:
-        toks = tokenizer_fn(ex['text'])
-        if len(toks) == 0:
-            continue
-        toks = toks[:max_length]
-        ids.append(torch.tensor(toks, dtype=torch.long))
-    if len(ids) == 0:
-        return None
-    ids = torch.nn.utils.rnn.pad_sequence(ids, batch_first=True, padding_value=0)
-    return ids
-
-
-def simple_tokenizer(text):
-    # reuse model's small tokenizer: whitespace hash
-    from .model import LightGPT
-    return LightGPT.small_vocab_tokenize(text)
-
-
-def train(args):
-    device = torch.device('cuda' if torch.cuda.is_available() and not args.cpu else 'cpu')
-    print('Using device', device)
-
-    ds = load_dataset('wikitext', 'wikitext-2-raw-v1', split='train')
-    # filter short lines
-    ds = ds.filter(lambda x: len(x['text'].strip())>0)
-
-    model = LightGPT(mode=args.mode, max_seq_len=args.max_seq_len)
+def finetune(
+    model_name: str,
+    train_file: str,
+    output_dir: str,
+    epochs: int = 3,
+    batch_size: int = 4,
+    learning_rate: float = 5e-5,
+    max_length: int = 128,
+):
+    # Load tokenizer and model
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    model = AutoModelForCausalLM.from_pretrained(model_name)
+    model.train()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
-    opt = torch.optim.AdamW(model.parameters(), lr=args.lr)
 
-    batch_size = args.batch_size
-    for epoch in range(args.epochs):
-        loader = DataLoader(ds, batch_size=batch_size, shuffle=True, collate_fn=lambda b: collate_fn(b, simple_tokenizer, args.max_seq_len))
-        pbar = tqdm(loader, desc=f'Epoch {epoch}')
+    # Dataset and dataloader
+    dataset = TextDataset(train_file, tokenizer, max_length=max_length)
+    dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
+
+    # Optimizer
+    optimizer = AdamW(model.parameters(), lr=learning_rate)
+
+    print(f"Starting finetuning on {len(dataset)} examples, {epochs} epochs")
+    for epoch in range(epochs):
         total_loss = 0.0
-        steps = 0
-        for batch in pbar:
-            if batch is None:
-                continue
-            batch = batch.to(device)
-            inputs = batch[:, :-1]
-            targets = batch[:, 1:]
-            logits = model(inputs)
-            loss = torch.nn.functional.cross_entropy(logits.view(-1, logits.size(-1)), targets.reshape(-1), ignore_index=0)
-            opt.zero_grad()
+        for batch in dataloader:
+            optimizer.zero_grad()
+            input_ids = batch["input_ids"].to(device)
+            attention_mask = batch["attention_mask"].to(device)
+            # The model returns ``loss`` when ``labels`` are provided
+            outputs = model(
+                input_ids=input_ids,
+                attention_mask=attention_mask,
+                labels=input_ids,
+            )
+            loss = outputs.loss
             loss.backward()
-            opt.step()
+            optimizer.step()
             total_loss += loss.item()
-            steps += 1
-            pbar.set_postfix(loss=total_loss/steps)
-        print(f'Epoch {epoch} avg loss {total_loss/steps:.4f}')
+        avg_loss = total_loss / len(dataloader)
+        print(f"Epoch {epoch + 1}/{epochs} – Avg loss: {avg_loss:.4f}")
 
-    # save a small checkpoint
-    torch.save({'model_state_dict': model.state_dict(), 'config': model.__dict__}, args.out)
-    print('Saved checkpoint to', args.out)
+    # Save model and tokenizer
+    os.makedirs(output_dir, exist_ok=True)
+    model.save_pretrained(output_dir)
+    tokenizer.save_pretrained(output_dir)
+    print(f"Finetuned model saved to {output_dir}")
 
 
-if __name__ == '__main__':
-    p = argparse.ArgumentParser()
-    p.add_argument('--mode', choices=['overkill','normal','underkill'], default='normal')
-    p.add_argument('--epochs', type=int, default=1)
-    p.add_argument('--batch_size', type=int, default=8)
-    p.add_argument('--lr', type=float, default=1e-4)
-    p.add_argument('--max_seq_len', type=int, default=64)
-    p.add_argument('--out', default='lightgpt.chkpt')
-    p.add_argument('--cpu', action='store_true')
-    args = p.parse_args()
-    train(args)
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Finetune a pretrained HuggingFace model for LightGPT")
+    parser.add_argument("--model", default="gpt2", help="Base model name or path on the HF hub")
+    parser.add_argument("--train_file", required=True, help="Path to a plain‑text training file")
+    parser.add_argument("--output_dir", required=True, help="Directory where the finetuned model will be stored")
+    parser.add_argument("--epochs", type=int, default=3, help="Number of training epochs")
+    parser.add_argument("--batch_size", type=int, default=4, help="Training batch size")
+    parser.add_argument("--lr", type=float, default=5e-5, help="Learning rate")
+    parser.add_argument("--max_length", type=int, default=128, help="Maximum token length per example")
+    args = parser.parse_args()
+    finetune(
+        model_name=args.model,
+        train_file=args.train_file,
+        output_dir=args.output_dir,
+        epochs=args.epochs,
+        batch_size=args.batch_size,
+        learning_rate=args.lr,
+        max_length=args.max_length,
+    )

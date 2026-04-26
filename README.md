@@ -1,107 +1,78 @@
-# LightGPT
+# LightGPT – Simple Hugging Face Wrapper
 
-LightGPT — a lightweight, GPT-styled LLM designed to run on a wide range of hardware. It supports three modes:
+LightGPT is now a thin wrapper around any Hugging Face causal language model (e.g. `gpt2`, `distilgpt2`, `EleutherAI/gpt‑neo‑125M`).
+It provides a very small API for loading a model, generating text, saving/loading weights, and exporting to ONNX.
 
-- Overkill: uses larger architecture and optimized libraries (for modern hardware)
-- Normal: balanced parameters for decent CPU/RAM machines
-- Underkill: very small footprint for ancient/low-memory hardware
+---
 
-This repo contains a minimal reference implementation and demo to run on CPU.
+## Quickstart
 
-Quickstart (CPU):
-
-1. Create a Python environment with Python 3.10+.
-2. Install dependencies:
-
-```
+```bash
+# Install dependencies (torch, transformers, onnx, onnxruntime)
 pip install -r requirements.txt
 ```
 
-1. Run the demo:
+```python
+from lightgpt.model import LightGPT
 
-```
-python examples/run_demo.py --mode normal
-```
+# Load a model (downloads from Hugging Face if needed)
+lgpt = LightGPT(model_name="gpt2")
 
-See `src/lightgpt` for the model and `examples/run_demo.py` for usage.
-
-Advanced: ONNX & Tiny runtime
-
-- Export ONNX: `python3 examples/export_onnx.py`
-- Export NPZ weights for Tiny runtime (after training or checkpoint):
- `python3 scripts/export_npz.py lightgpt.chkpt lightgpt_weights.npz`
-- Run NumPy Tiny runtime (Underkill):
- `python3 benchmarks/bench_infer.py lightgpt_weights.npz`
-
-ONNX Runtime (optimized CPU)
-
-- Export dynamic-axes ONNX model:
-
-```
-python3 examples/export_onnx.py --out lightgpt.onnx --mode normal --seq 64
+# Generate text
+txt = lgpt.generate(
+    prompt="The future of AI is",
+    max_new_tokens=30,
+    temperature=0.8,
+    do_sample=True,
+)
+print(txt)
 ```
 
-- Optionally quantize the ONNX model (int8 weights):
+## Command‑line interface
 
-```
-python3 examples/quantize_onnx.py lightgpt.onnx
-```
-
-- Run ONNX Runtime optimized inference (set threads for CPU parallelism):
-
-```
-python3 examples/run_onnx.py lightgpt.onnx --prompt "Hello world" --intra 2 --inter 1
-```
-
-The ONNX runner uses `onnxruntime` with `ORT_ENABLE_EXTENDED` optimizations and lets you tune `intra_op_num_threads` and `inter_op_num_threads` for your CPU.
-
-Benchmarks & Model Checks
-
-- Compare FP32 vs INT8 ONNX:
-
-```
-python3 examples/onnx_benchmark.py lightgpt.onnx --quant lightgpt.quant.onnx --prompt "Hello" --runs 5 --gen 16
+```bash
+python -m lightgpt.cli \
+    --model gpt2 \
+    --prompt "Once upon a time" \
+    --max_new_tokens 40 \
+    --temperature 0.9 \
+    --do_sample
 ```
 
-- Run the model checks (Conversation / Questionnaire / Philosophical) across PyTorch, ONNX and Tiny runtime:
+## Finetuning a model
 
-```
-python3 examples/model_check.py --out report.txt --onnx lightgpt.onnx --npz lightgpt_weights.npz --mode normal
-```
+A minimal finetuning script is provided in `src/lightgpt/train.py`. It uses the standard `transformers` training loop.
 
-The `model_check.py` script will write a textual report `report.txt` containing the generated token ids and a simple tokenized token-preview. Use this to verify that LightGPT produces outputs for different content styles and runtimes.
-
-Packaging & publishing to PyPI
------------------------------
-
-This repository is configured to publish as a Python package. Steps to publish a release:
-
-1. Create a PyPI API token: go to <https://pypi.org/manage/account/#api-tokens> and create a token with `upload` scope.
-
-Continuous Integration (recommended)
-----------------------------------
-
-Add the token as a repository secret named `PYPI_API_TOKEN` in GitHub (Settings → Secrets). A release workflow is included that publishes automatically when you push a tag matching `v*` (e.g. `v0.1.0`).
-
-Manual (local)
---------------
-
-If you prefer to publish locally, set an environment variable and run the included publish script. Use a secure shell environment — do not commit your token.
-
-POSIX example:
-
-```
-export TWINE_PASSWORD=pypi-...
-./scripts/publish_pypi.sh
+```bash
+python -m lightgpt.train \
+    --model gpt2 \
+    --train_file data/my_corpus.txt \
+    --output_dir finetuned_gpt2 \
+    --epochs 3
 ```
 
-PowerShell example:
+The script writes a new directory containing a `pytorch_model.bin` and tokenizer files that can be loaded with `LightGPT(model_name="finetuned_gpt2")`.
 
+## Export to ONNX (for Hugging Face Hub)
+
+```bash
+python -m lightgpt.export_onnx \
+    --model finetuned_gpt2 \
+    --output lightgpt.onnx
 ```
-$env:TWINE_PASSWORD='pypi-...'; ./scripts/publish_pypi.ps1
-```
 
-Notes:
+The resulting `lightgpt.onnx` can be uploaded to the Hugging Face Model Hub alongside the saved model folder.
 
-- The package uses `pyproject.toml` + `setuptools` and includes `README.md` as the long description.
-- For Colab, you can install directly from GitHub: `pip install git+https://github.com/Maor-404/LightGPT.git`.
+---
+
+## Why this wrapper?
+
+* **Simplicity** – No custom architecture to maintain; you rely on the battle‑tested `transformers` implementations.
+* **Portability** – Export to ONNX for fast CPU inference or deployment to environments where PyTorch isn’t available.
+* **Flexibility** – Swap the base model by changing a single string (`model_name`).
+
+---
+
+## License
+
+MIT – see `LICENSE` for details.

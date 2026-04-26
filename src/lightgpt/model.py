@@ -1,89 +1,80 @@
-import math
 import torch
-import torch.nn as nn
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from .holiday_personas import get_persona_prompt
 
-# Simple, minimal GPT-style model optimized for CPU and small memory
+class LightGPT:
+    """A thin wrapper around a HuggingFace causal language model.
 
-MODE_CONFIGS = {
-    "overkill": {"n_layer": 8, "n_head": 8, "n_embd": 512},
-    "normal": {"n_layer": 6, "n_head": 6, "n_embd": 256},
-    "underkill": {"n_layer": 2, "n_head": 2, "n_embd": 64},
-}
+    It loads a pretrained model, provides a simple ``generate`` method, and
+    supports optional holiday personas that can be prepended to the prompt.
+    """
 
-class FeedForward(nn.Module):
-    def __init__(self, n_embd):
-        super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(n_embd, 4 * n_embd),
-            nn.GELU(),
-            nn.Linear(4 * n_embd, n_embd),
-        )
-    def forward(self, x):
-        return self.net(x)
+    def __init__(self, model_name: str = "EleutherAI/gpt-neo-125M", device: str | None = None):
+        """Initialize the model and tokenizer.
 
-class Attention(nn.Module):
-    def __init__(self, n_embd, n_head):
-        super().__init__()
-        assert n_embd % n_head == 0
-        self.n_head = n_head
-        self.head_dim = n_embd // n_head
-        self.qkv = nn.Linear(n_embd, 3 * n_embd)
-        self.proj = nn.Linear(n_embd, n_embd)
+        Args:
+            model_name: Name or path of the Hugging Face model.
+            device: ``"cpu"`` or ``"cuda"``. If ``None`` the best available device is chosen.
+        """
+        self.model_name = model_name
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
+        if self.tokenizer.pad_token is None:
+            self.tokenizer.pad_token = self.tokenizer.eos_token
+        self.model = AutoModelForCausalLM.from_pretrained(model_name)
+        self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+        self.model.to(self.device)
+        self.model.eval()
 
-    def forward(self, x):
-        B, T, C = x.size()
-        qkv = self.qkv(x).view(B, T, 3, self.n_head, self.head_dim)
-        q, k, v = qkv.unbind(dim=2)
-        # scaled-dot
-        att = (q @ k.transpose(-2, -1)) / math.sqrt(self.head_dim)
-        att = torch.softmax(att, dim=-1)
-        out = (att @ v).transpose(1,2).contiguous().view(B, T, C)
-        return self.proj(out)
+    def generate(
+        self,
+        prompt: str,
+        max_new_tokens: int = 50,
+        temperature: float = 1.0,
+        do_sample: bool = False,
+        top_k: int | None = None,
+        top_p: float | None = None,
+        persona: str | None = None,
+    ) -> str:
+        """Generate text continuation for a prompt.
 
-class Block(nn.Module):
-    def __init__(self, n_embd, n_head):
-        super().__init__()
-        self.ln1 = nn.LayerNorm(n_embd)
-        self.attn = Attention(n_embd, n_head)
-        self.ln2 = nn.LayerNorm(n_embd)
-        self.ff = FeedForward(n_embd)
-    def forward(self, x):
-        x = x + self.attn(self.ln1(x))
-        x = x + self.ff(self.ln2(x))
-        return x
+        Args:
+            prompt: Input text.
+            max_new_tokens: Number of tokens to generate.
+            temperature: Sampling temperature.
+            do_sample: Whether to sample (True) or use greedy decoding.
+            top_k: Top‑k sampling (optional).
+            top_p: Nucleus sampling (optional).
+            persona: Optional holiday persona key (e.g. ``"may_the_4th"``). If provided,
+                the corresponding persona prompt is prepended.
+        """
+        # Apply persona if requested
+        if persona:
+            persona_prompt = get_persona_prompt(persona)
+            if persona_prompt:
+                prompt = f"{persona_prompt}\n{prompt}"
+        inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
+        gen_kwargs = {
+            "max_length": inputs["input_ids"].shape[1] + max_new_tokens,
+            "temperature": temperature,
+            "do_sample": do_sample,
+            "pad_token_id": self.tokenizer.pad_token_id,
+            "eos_token_id": self.tokenizer.eos_token_id,
+        }
+        if top_k is not None:
+            gen_kwargs["top_k"] = top_k
+        if top_p is not None:
+            gen_kwargs["top_p"] = top_p
+        with torch.no_grad():
+            output_ids = self.model.generate(**inputs, **gen_kwargs)
+        return self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
 
-class LightGPT(nn.Module):
-    def __init__(self, vocab_size=50257, mode="normal", max_seq_len=128):
-        super().__init__()
-        cfg = MODE_CONFIGS.get(mode, MODE_CONFIGS["normal"])
-        self.n_layer = cfg["n_layer"]
-        n_embd = cfg["n_embd"]
-        self.tok_emb = nn.Embedding(vocab_size, n_embd)
-        self.pos_emb = nn.Embedding(max_seq_len, n_embd)
-        self.drop = nn.Dropout(0.1)
-        self.blocks = nn.ModuleList([Block(n_embd, cfg["n_head"]) for _ in range(self.n_layer)])
-        self.ln_f = nn.LayerNorm(n_embd)
-        self.head = nn.Linear(n_embd, vocab_size, bias=False)
-        self.max_seq_len = max_seq_len
+    def save(self, save_directory: str) -> None:
+        """Save the model and tokenizer to ``save_directory``."""
+        self.model.save_pretrained(save_directory)
+        self.tokenizer.save_pretrained(save_directory)
+        print(f"Model and tokenizer saved to {save_directory}")
 
-    def forward(self, idx):
-        # idx: (B, T)
-        B, T = idx.size()
-        assert T <= self.max_seq_len
-        pos = torch.arange(0, T, dtype=torch.long, device=idx.device).unsqueeze(0)
-        x = self.tok_emb(idx) + self.pos_emb(pos)
-        x = self.drop(x)
-        for b in self.blocks:
-            x = b(x)
-        x = self.ln_f(x)
-        logits = self.head(x)
-        return logits
-
-    @staticmethod
-    def small_vocab_tokenize(text):
-        # very small tokenization: whitespace split -> ids using hash (for demo only)
-        tokens = text.strip().split()
-        ids = [abs(hash(t)) % 50257 for t in tokens]
-        return ids
-
-*** End Patch
+    @classmethod
+    def load(cls, load_directory: str, device: str | None = None) -> "LightGPT":
+        """Load a previously saved model from ``load_directory``."""
+        return cls(model_name=load_directory, device=device)
